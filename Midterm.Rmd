@@ -1,0 +1,179 @@
+---
+title: "Midterm Exam"
+author: "DSO 424. Business Forecasting"
+date: "Exam time: 10:00 am - 6:00 pm PST"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+
+# INSTRUCTIONS
+
+The test is a take-home, open-book, and open-notes. You are not allowed to discuss and/or receive help from anyone either in class or not, either human or not :).
+
+Download Rmd file from Blackboard to include your answers there. Your answers should be clear. Make sure to answer all questions.
+
+You will be asked to submit Rmd file with your solution on BB.
+
+
+\newpage
+
+## Alomega Food stores case
+
+Alomega Food Stores is a retail food provider with 27 stores in a Midwestern state. The company engages in various kinds of advertising and, until recently, had never studies the effect its advertising have on sales, although some data had been collected and stored for 3 years.
+
+The executives at Alomega decided to begin tracking their advertising effors along with the sales volumes for each month. Their hope is that after several months the collected data could be examined to possibly reveal relationships that would help in determining future advertising expenditures and forecast sales.
+
+After a few months of collecting data and analyzing past records, the accounting department completed a data array for 48 months using the following variables:
+
+(-) Sales in dollars
+
+(-) Newspaper advertising dollars
+
+(-) TV advertising dollars
+
+Data can be found in *Alomega.csv*.
+
+### Objective
+
+You've been hired as a consultant to a team that works on this problem. You need to find a way to forecast the sales and quantify the effect advertising has on sales. You decide to start with quantifying the advertising effect on the sales. Then you consider forecasting sales based on past records only.
+
+
+\vspace{1cm}
+
+
+## How much advertising is really worth?
+
+In the effort of identifying which factors drive sales, you decided to start with identifying whether advertising is really worth its cost. Perform your analysis using ALL data available. 
+
+(@) Choose either Newspaper advertising or TV advertising as an explanatory variable. Clearly identify which type of advertising you've selected and briefly explain why. You will use this _type_ of advertising throughout your analysis.
+# TV advertising
+# This is becasue of the impact of visual media in advertising. TV ads can influence a larger audience, potentially leading to a more significant impact on sales compared to newspaper advertising. Additionally, the visual and auditory components of TV advertising might have a stronger effect on consumer behavior.
+
+(@) Visualize your data. Produce a scatter plot of the Sales in dollars and advertising variable you've selected above. Decide which variable is explanatory, $X$, and which one is the dependent variable, $Y$. Clearly label the axis. Include your script. Comment on the association pattern in your plot.
+```{r}
+data=read.csv("Alomega(1).csv", header = T)
+head(data, 5)
+
+attach(data)
+plot(TV, Sales, main="Sales vs. TV Advertising", xlab="TV Advertising Dollars", ylab="Sales in Dollars")
+```
+# Sales in dollars (dependent variable, Y) against TV advertising dollars (explanatory variable, X)
+# From the plot, we can observe a pattern that suggests a positive association between the amount spent on TV advertising and sales; as the expenditure on TV advertising increases, sales also tend to increase. This initial observation supports the notion that TV advertising could have a positive impact on sales, although the relationship does not appear to be perfectly linear, and there is some variability in sales even at similar levels of TV advertising spending.
+
+You've decided to focus on the log-log model since you suspect that percentage increase in advertising leads to constant percentage changes in the sales. This approach would allow you compare effects of different types of advertising if needed. Use the records in the last three columns in the *Alomega.csv* file that have the log-transformed data available (natural log). 
+
+(@) Use the log-transformed data to fit the linear regression model that predicts percent changes in sales, i.e. logSales.  Write down your model. Produce a scatterplot with the fitted regression line in red. Label axis nicely. Include your script.
+```{r}
+lm_model = lm(logSales ~ logTV, data=data)
+lm_model
+summary(lm_model)
+
+plot(logTV, logSales, main="Log of Sales vs. Log of TV Advertising", xlab="Log of TV Advertising Dollars", ylab="Log of Sales")
+abline(lm_model, col="red")
+```
+# The linear regression model fitted on the log-transformed data is given by:
+logSales =  11.4502 + 0.1223 × logTV --> where a 1% increase in TV advertising dollars (after log transformation) is associated with an average increase of 0.1223% in sales, holding all other factors constant.
+
+(@) Does advertising REALLY effect sales? Run a hypothesis test. Report the p-value and your conclusion. Include your script.
+```{r}
+summary(lm_model)
+```
+# The p-value from our hypothesis test is approximately 0.0025, which is significantly less than the commonly used significance level of 0.05. This result leads us to reject the null hypothesis, indicating that TV advertising does indeed have a statistically significant effect on sales. This conclusion supports the initial observation from our scatter plot and the positive coefficient in our log-log model.
+
+(@) What percent of variability in sale changes does your model explain? Comment on practical usefulness of the model.
+```{r}
+s=summary(lm_model)
+s$r.squared
+```
+# The R-squared value for our model is approximately 0.185, indicating that around 18.5% of the variability in sales changes is explained by our model. This suggests that while TV advertising has a statistically significant impact on sales, the model explains a moderate to low portion of the variability in sales changes. It implies that other factors, not included in this model, also play significant roles in influencing sales.
+
+(@) Test the regression model assumptions. Are all assumptions met (Yes / No / More-or-less)? If not, propose a way of fixing the assumptions (you don't have to perform additional analysis based on your suggestions).
+```{r}
+library(forecast)
+checkresiduals(lm_model)
+
+# Checking for normality of residuals
+qqnorm(lm_model$residuals)
+qqline(lm_model$residuals)
+
+# Checking for constant variance (homoscedasticity)
+plot(logTV, lm_model$residuals)
+
+# Checking for independence
+library(zoo)
+library(lmtest)
+dwtest(logSales~logTV, data=data, alternative = "two.sided")
+```
+# The Normal Q-Q Plot shows that the residuals deviate from the line at the tails, indicating that the residuals are not perfectly normally distributed, especially at the extremes.
+# The spread of residuals seems to vary across the range of fitted values, suggesting potential issues with homoscedasticity, although not pronounced.
+# We reject the null hypothesis for the dwtest. They are not independent.
+
+# It is clear that the model's assumptions are not entirely met, suggesting caution when interpreting the model results. The model might still provide valuable insights, but it would be beneficial to consider these limitations and potentially explore more complex modeling approaches or adjustments to better meet the assumptions for linear regression.
+
+# Porpose way: Adding Lagged Variables- For time series data, including lagged terms of the dependent variable or other predictors might capture time-dependent changes and reduce autocorrelation.
+
+(@) Write an executive summary of your findings (1-2 paragraphs). Discuss whether the model explains enough variability in sales to be useful for making business decisions.
+# After analyzing the data from Alomega Food Stores and focusing on the impact of TV advertising on sales, our findings suggest that TV advertising has a statistically significant effect on sales. The log-log regression model demonstrates a positive relationship, indicating that increases in TV advertising spending are associated with increases in sales. However, the model explains a moderate to low portion of the variability in sales changes, with an r-squared value of approximately 18.5%. The assessment of model assumptions revealed some concerns regarding the normality of residuals, homoscedasticity, and independence of residuals. These findings suggest that while the model offers valuable insights, it has limitations that must be considered. The deviations from key assumptions may affect the reliability of the model's predictions and interpretations.
+
+# In conclusion, TV advertising appears to be a valuable tool for driving sales at Alomega Food Stores, but the company should remain mindful of the limitations of the current analysis. It may benefit from exploring more sophisticated models or methodologies to better understand the dynamics of advertising effectiveness. Additionally, considering other factors such as seasonality, competitor actions, and market changes could provide a more comprehensive view of sales drivers and help refine future advertising strategies.
+
+
+## Forecasting Alomega sales
+
+You decided to continue forecasting the percent change in the sales, i.e. log of sales. You focus on time series and study the patterns withing the log of sales. To get a realistic model assessment, you split your data into training and validation periods. Since you have about 4 years worth of data, you leave only the last 3 months for the validation purposes.
+
+(@) Consider monthly log of sales during the training period, January 2003 - August 2006. Plot the time series. Label the axis and comment on the components of the time series. Include the plot, script, and your comments.
+```{r}
+data.ts=ts(data$logSales, start=c(2003, 1), frequency=12)
+
+library(forecast)
+autoplot(data.ts, ylab = "Log of Sales", main = "Alomega Monthly Log of Sales", xlab="Year")
+```
+# The time series plot for the monthly log of sales during the training period (January 2003 - August 2006) shows the trend and fluctuations in sales over time.
+# Trends: There does not appear to be a clear long-term upward or downward trend over the years. The log of sales fluctuates around a certain level, indicating that the overall magnitude of sales might be relatively stable when viewed on a logarithmic scale.
+# Seasonality: There are consistent patterns that repeat over time which might suggest seasonality. For example, there are regular spikes and drops which could indicate higher sales in certain months and lower in others. This is common in many businesses that have certain peak periods due to holidays, seasons, or other cyclical events
+
+(@) Use an appropriate naive forecasting approach and forecast the log of sales for the validation period, Sept 2006 - Nov 2006. Plot the log of sales for training period, add the forecasted values, and add the actual observed log of sales during the validation period. Include the plot with nice axis.
+```{r}
+# Length of the time series
+n = length(data.ts)
+
+# Set up the forecasting horizon, here it is 3 months for validation
+stepsAhead = 3
+
+# Length of the training set
+nTrain = n - stepsAhead
+
+# Create the training and validation sets
+train.ts = window(data.ts, end=c(2006, 8))
+valid.ts = window(data.ts, start=c(2006, 9))
+
+# Naive forecast for the validation period
+naive_pred = naive(train.ts, h=stepsAhead, PI=FALSE)
+
+plot(train.ts, xlim=c(2003, 2007), ylim=range(c(train.ts, valid.ts, naive_pred$mean)), xlab="Year", ylab="Log of Sales", main="Log of Sales with Naive Forecast", col="blue")
+lines(naive_pred$mean, col="red", lty=2)
+lines(valid.ts, col="green")
+legend("topleft", legend=c("Training", "Forecasted Values", "Actual Sales"), col=c("blue", "red", "green"), lty=c(1, 2, 1), cex=0.5)
+
+```
+(@) Assess the model performance. Find the MAPE for training and validation sets. Comment on model's overall accuracy and robustness.
+```{r}
+accuracy(naive_pred, valid.ts)[,5]
+```
+# The Mean Absolute Percentage Error (MAPE) for the training set is approximately 3.07%, and for the validation set, it is about 5.25%. These results indicate that the naive forecasting model has a reasonable level of accuracy, with errors within a few percentage points of the actual sales. However, the slightly higher MAPE in the validation set suggests that the model's predictions deviate more from the actual sales figures when applied to future periods, highlighting potential limitations in its predictive capability.
+
+## Wrapping up
+
+(@) Write a brief executive summary for your team leader (1-2 paragraphs). Provide practical interpretation of your results. Include recommendations for Alomega management on advertising and ways to forecast sales.
+
+# Our analysis focused on understanding the impact of TV advertising on sales and forecasting future sales using historical data for Alomega Food Stores. The regression analysis revealed a statistically significant positive relationship between TV advertising expenditures and sales, suggesting that investment in TV advertising is beneficial for enhancing sales performance. However, the model explained a moderate portion of the variability in sales, indicating the influence of other unaccounted factors. The forecasting analysis employed a naive approach, yielding a MAPE of 3.07% for the training set and 5.25% for the validation set. This demonstrates the model's reasonable accuracy but also suggests potential for improvement. The naive model's simplicity, while beneficial for quick assessments, might not capture the complexities of sales dynamics effectively.
+
+# Recommendations for Alomega Management:
+# Advertising Strategy: Continue investing in TV advertising, as it shows a positive impact on sales. However, consider comprehensive analysis and possibly diversifying advertising channels to optimize the marketing mix.
+# Forecasting Sales: Explore more sophisticated forecasting methods that can incorporate seasonality, trends, and external factors to improve accuracy. Techniques such as ARIMA, Exponential Smoothing, or machine learning-based models may offer more precise predictions.
+# Data Analysis: Further investigate other variables that could influence sales, such as promotions, competitor activity, economic conditions, and online advertising, to build a more comprehensive model.
+# Continuous Monitoring and Adjustment: Regularly review and adjust advertising expenditures and sales forecasts based on updated data and market conditions to ensure strategies remain effective and responsive to changes.
