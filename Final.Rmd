@@ -1,0 +1,86 @@
+---
+title: "Final"
+output: html_document
+date: "2024-05-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Question 4:
+```{r}
+data=read.csv("SeriesReport-202405062202.csv", skip=7)
+
+data.ts=ts(data$Value,start=c (1992,1), frequency=12)
+
+library(forecast)
+autoplot(data.ts, main="Monthly Sales of Nonstore Retailers", xlab="Year",
+         ylab="Sales (Millions of Dollars)")
+
+```
+# The overall sales volume has been increasing significantly over the time span, indicating exponential growth. Additionally, there are clear, recurring peaks within each year, suggesting seasonal fluctuations that repeat annually. These could reflect increased sales activities during specific periods, such as holidays or promotional seasons.
+
+Quesion 5:
+```{r}
+m1 = ets(data.ts, model = "AAA")
+m1.pred=forecast(m1, h=1)
+accuracy(m1.pred, data.ts)
+
+m2 = ets(data.ts, model = "AAN")
+m2.pred=forecast(m2, h=1)
+accuracy(m2.pred, data.ts)
+
+
+m3 = ets(data.ts, model = "MAM")
+m3.pred=forecast(m3, h=1)
+accuracy(m3.pred, data.ts)
+# most optimal
+
+
+# double checking
+model = ets(data.ts, model = "ZZZ")
+model.pred=forecast(model, h=1)
+
+accuracy(model.pred, data.ts)
+
+model.pred
+```
+
+
+```{r}
+checkresiduals(model)
+
+Acf(residuals(model))
+```
+Quesion 7
+```{r}
+workdata=read.csv("CanadianWorkHours.csv")
+
+workdata.ts=ts(workdata$Hours_per_week, start=(1966))
+
+autoplot(workdata.ts, main="average annual weekly work hours", xlab = "Year",
+         ylab="hours per week")
+```
+# The plot reveals a downward trend in the annual average weekly work hours of Canadian manufacturing workers over the years. The decline appears somewhat linear, but with some fluctuation that may suggest a non-linear trend or variance around the trend line. There is no clear seasonal pattern apparent from the data; the fluctuations do not seem to repeat cyclically within a fixed period.
+
+Question 8
+```{r}
+library(forecast)
+library(astsa)
+
+autoplot(GNP)
+
+gnp.growthrate = diff(log(gnp))
+
+model.ar1 = Arima(gnp.growthrate, order=c(1,0,0))
+
+residuals(model.ar1)
+
+accuracy(model.ar1)
+
+growthrate.pred = forecast(model.ar1, h = 1)
+growthrate.pred
+```
+
