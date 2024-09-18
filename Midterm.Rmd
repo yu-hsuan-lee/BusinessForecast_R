@@ -1,25 +1,3 @@
----
-title: "Midterm Exam"
-author: "DSO 424. Business Forecasting"
-date: "Exam time: 10:00 am - 6:00 pm PST"
-output:
-  html_document:
-    df_print: paged
-  pdf_document: default
-  word_document: default
----
-
-# INSTRUCTIONS
-
-The test is a take-home, open-book, and open-notes. You are not allowed to discuss and/or receive help from anyone either in class or not, either human or not :).
-
-Download Rmd file from Blackboard to include your answers there. Your answers should be clear. Make sure to answer all questions.
-
-You will be asked to submit Rmd file with your solution on BB.
-
-
-\newpage
-
 ## Alomega Food stores case
 
 Alomega Food Stores is a retail food provider with 27 stores in a Midwestern state. The company engages in various kinds of advertising and, until recently, had never studies the effect its advertising have on sales, although some data had been collected and stored for 3 years.
