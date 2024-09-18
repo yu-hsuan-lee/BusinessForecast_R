@@ -1,13 +1,3 @@
----
-title: 'DSO 424: Business Forecasting'
-author: 'Lab 4: Forecasting Amazon Revenue'
-output:
-  word_document: default
-  html_document: default
-  pdf_document: default
-header-includes: \usepackage{color}
----
-
 # Case: Amazon.com Revenues 
 
 Amazon.com is primarily a retail site with a sales revenue model. Amazon makes its money by taking a small percentage of the sale price of each item that is sold through its website. Amazon also allows companies to advertise their products by paying to be listed as featured products. 
