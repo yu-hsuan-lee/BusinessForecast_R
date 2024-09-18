@@ -1,12 +1,3 @@
----
-title: 'DSO 424: Business Forecasting'
-author: 'Lab 10: Predicting weekly gas price'
-header-includes: \usepackage{color}
-output:
-  word_document: default
-  pdf_document: default
----
-
 # Background
 
 Since the oil crisis of early 1970, oil price has shown marked impacts on the global economy. The high gasoline price in 2008 further demonstrated the effects of oil price on daily life. High gasoline price results in high transportation and heating cost and, hence, higher prices for foods and services. This in turn leads to inflation and lower disposable income for consumers on other items. In some cases, it can even lead to recession in an economy. Thus, it is of interest and importance to analyze the gasoline price. In this case study, we analyze the weekly retail regular gasoline price of the United States. We can also study the dependence of gasoline price on the crude oil price and use the latter to improve the forecast of the former. 
