@@ -1,0 +1,175 @@
+---
+title: 'DSO 424: Business Forecasting'
+author: 'Lab 7: Smoothing methods'
+header-includes: \usepackage{color}
+output:
+  word_document: default
+  pdf_document: default
+---
+
+# Case: Nike Revenue Forecast
+
+
+NIKE is a consumer products company, the relative popularity of various sports and fitness activities and changing design trends affect the demand for the products. They must therefore respond to trends and shifts in consumer preferences by adjusting the mix of existing product offerings, developing new products, styles and categories, and influencing sports and fitness preferences through aggressive marketing. Failure to respond in a timely and adequate manner could have a material adverse effect on the sales and profitability. This is a continuing risk.
+
+You are hired as a _research analyst_ at a small investment firm to evaluate Nike Inc.'s performance by analyzing the firm's revenues. Some analysts argue that Nike's revenue may slow down due to the global economic crisis and increased competition from emerging brands. Others believe that with a strong and free cash flow, Nike will likely survive this current environment and emerge stronger as some of the weaker competitors get squeezed. You fully understands that nobody really knows how well this Oregon-based sportswear company will perform in a softening global economy. However, you believe that Nike's past performance will aid in forecasting its future performance. 
+You have collected quarterly data on Nike's quarterly revenue in millions of USD during 1999 through 2009.
+
+## Task:
+
+Build a forecasting model to predict Nike's revenue for 2010. Prepare a report to summarize your approach(es) and findings. You will need to convey statistical information in written form to those who may not know statistical terminology. Your report is needed as input for managerial decision making in sales, marketing, and company planning.
+
+## Your Action Plan:
+
+(1.) Consider several models (naive forecasting, MA, Holt-Winter's exponential smoothing model);
+
+(2.) Get their realistic performance estimates;
+
+(3.) Choose the best model;
+
+(4.) Forecast Nike's quarterly revenue for 2010;
+
+(5.) Check the Nike's 2010 report to get the actual revenue;
+
+(6.) Write an executive summary.
+
+\newpage
+# Case questions
+
+
+### 1. Models
+
+(@)	Nike's quarterly revenues are given in ``NikeRevenue.csv''. Uopload data into R. Convert it to time series object. Plot the data. Label the axis nicely. Which time series components seem to be present in this series? Interpret the chart in practical terms. Did global economic crisis seem to have affected Nike's revenue? 
+```{r}
+data=read.csv("NikeRevenue(1).csv", header = T)
+data.ts=ts(data[,3], start=c(1999,1), frequency = 4) # 4 because data is quarterly
+
+library(forecast)
+autoplot(data.ts, ylab="mln $", main = "Nike's Revenue")
+Acf(diff(data.ts, lag=1), lag.max = 100) # to check seasonality
+```
+# After removing the trend we can see that ac shows significant correlations at lags that are multiples of 4 (i.e. 4 quarters, a year)
+
+
+###### Model 1: Naive forecasting
+
+(@) Use the naive forecasting approach the training set. Forecast the revenue for 2009 (validation set). Include your script.
+```{r}
+nValid = 4
+nTrain = length(data.ts) - nValid
+train.ts = window(data.ts, start=c(1999, 1), end=c(1999, nTrain))
+valid.ts = window(data.ts, start=c(1999, nTrain + 1), end=c(1999, nTrain + nValid))
+
+m1 = snaive(train.ts, h = frequency(train.ts))
+
+m1.pred = forecast(m1)
+m1.pred$mean
+```
+
+(@) Find the MAPE for training and validation sets. Comment on model's overall accuracy and robustness.
+```{r}
+accuracy(m1.pred, valid.ts)[,5]
+accuracy(m1.pred, valid.ts)[ ,5]
+```
+# The model demonstrates good accuracy and robustness, with MAPE values below 10% for both training and test sets, indicating consistent and reliable predictions.
+
+###### Model 2: Moving average
+
+(@) Apply the Moving average smoothing to the training set. Briefly justify your choice of the smoothing window $w$. Forecast the revenue for 2009 (validation set). Include your script.
+```{r}
+library(zoo)
+w=4
+m2 = rollmean(train.ts, k=w, align="right")
+
+last.ma= tail(m2, 1)
+
+m2.pred=ts(rep(last.ma, nValid), 
+           start = c(1999,nTrain+1),
+           end= c(1999, nTrain+ nValid),
+           frequency=4)
+
+m2.pred
+```
+
+(@) Find the MAPE for training and validation sets. Comment on model's overall accuracy and robustness.
+```{r}
+accuracy(m2, train.ts)[5]
+accuracy(m2.pred, valid.ts)[5]
+```
+# The model exhibits high accuracy and robustness, with MAPE values below 6% for both training and validation sets, indicating precise and stable performance.
+
+###### Model 3: Holt-Winter's exponential smoothing
+
+(@) Apply the Holt-Winter's exponential smoothing to the training set. Let software  choose the optional type for noise, trend, and seasonality (model="ZZZ"). Report the optimal model structure: types of error, trend, seasonality. Forecast the revenue for 2010. Include your script.
+```{r}
+m3 = ets(train.ts, model = "ZZZ")
+m3.pred = forecast(m3, h = nValid, level = 0)
+
+m3$method
+
+m3.pred$mean
+```
+
+(@) Find the MAPE for training and validation. Comment on model's overall accuracy and robustness.
+```{r}
+accuracy(m3.pred, valid.ts)[,5]
+```
+# The model shows high accuracy on the training set with a low MAPE of 2.58%, but less robustness on the test set, indicated by a higher MAPE of 13.10%, suggesting potential overfitting.
+
+
+### 2. Best model performance estimate
+
+(@) For the three models you've report the values of MAPE for the training and validation sets Comment on models' overall accuracy and robustness.
+```{r}
+#m1
+accuracy(m1.pred, valid.ts) [,5]
+#m2
+accuracy (m2, train.ts) [5]
+accuracy (m2.pred, valid.ts) [5]
+#m3
+accuracy (m3.pred, valid.ts) [,5]
+```
+
+
+### 3. Choose the best one
+
+(@) Among the techniques you have considered, which one you would recommend the company to use to forecast future sales revenue? Explain why.
+# the second model since the MAPE is the smallest, meaning that it is more accurate and robust.
+
+### 4. Forecast Nike's quarterly revenue for 2010
+
+(@) Use the best model you've selected earlier with all available data to forecast the quartlerly revenue for 2010. Report your forecasts. Include your script.
+```{r}
+w=4
+m = rollmean (data.ts, k = w, align = "right")
+last.ma = tail(m, 1)
+
+m.pred = ts (rep (last.ma, nValid),
+             start = c (2010, 1),
+             end = c (2010,4),
+             frequency = 4)
+m.pred
+```
+
+### 5. Check the Nike's 2010 report to get the actual revenue
+
+(@) Nike actual revenue for 2010 was: 1st quarter = 4,799; 2nd quarter = 4,406; 3rd quarter = 4,733; 4th quarter = 5,077 in millions of USD. Nike's revenue for each quarter in 2010 are on page 22 in 
+
+http://www3.nd.edu/~scorwin/fin70610/documents/Nike_10K_2009.pdf
+
+
+Plot the actual 2010 revenue and your forecasts. Does your model follow the correct patterns? How does your prediction compare to the average 2010 revenue? Report the MAPE. Is the error rate acceptable? 
+```{r}
+rev2010= c(4799,4406,4733,5077)
+rev2010.ts=ts(rev2010, start=c(2010,1), frequency = 4)
+ave2010=ts(rep (mean (rev2010.ts) ,4), start=c (2010,1), frequency = 4)
+
+plot(rev2010.ts, ylab="mln $", xaxt="n", xlab="2010")
+axis (1, at = as.vector (time (rev2010.ts)),
+      labels = c("Q1","Q2","Q3","Q4"))
+lines(m.pred, lty=2, col="blue")
+lines (ave2010, col=2)
+
+accuracy (m.pred, rev2010.ts)
+```
+3.94% off, the error is acceptable and even lower than the orginal model 2 MAPE.

@@ -1,0 +1,101 @@
+---
+title: 'DSO 424: Business Forecasting'
+author: 'Lab 10: Predicting weekly gas price'
+header-includes: \usepackage{color}
+output:
+  word_document: default
+  pdf_document: default
+---
+
+# Background
+
+Since the oil crisis of early 1970, oil price has shown marked impacts on the global economy. The high gasoline price in 2008 further demonstrated the effects of oil price on daily life. High gasoline price results in high transportation and heating cost and, hence, higher prices for foods and services. This in turn leads to inflation and lower disposable income for consumers on other items. In some cases, it can even lead to recession in an economy. Thus, it is of interest and importance to analyze the gasoline price. In this case study, we analyze the weekly retail regular gasoline price of the United States. We can also study the dependence of gasoline price on the crude oil price and use the latter to improve the forecast of the former. 
+
+# Task
+
+Your task is to study the changes of the gasoline prices over time and find a time series model that captures those changes well.
+
+# Data
+
+The data used are obtained from the web site of US Energy Information Administration at http://www.eia.gov. The data span is from January 1997 to September 2010. More specifically, the weekly data of regular all formulations retail gasoline prices (dollars per barrel) are from Januray 06, 1997 to September 27, 2010. Because prices vary substantially, we use log prices in our analysis.
+Upload the data from _w-gasoline.txt_ using _read.table()_ function. Apply the log transform to the series.
+
+
+(@) Produce the time plot of weekly log prices of US regular gasoline. Comment on the patterns. Include your script. Hint: you can use the following to create the weekly time, x, for the plot: _tdx=c(1:717)/52+1997_.
+```{r}
+data=read.table("w-gasoline.txt")
+data.ts=ts(data$V1, start=c(1997,1), frequency = 52)
+
+library(forecast)
+autoplot(data.ts)
+
+ln.data= log(data.ts)
+autoplot(ln.data)
+```
+The time plot of the weekly log prices of US regular gasoline from January 1997 to September 2010 reveals an overall increasing trend with noticeable fluctuations and periods of volatility, particularly during economic downturns such as the 2008 financial crisis. Seasonal patterns are also evident, with prices typically rising during summer months. The plot demonstrates the complex dynamics of gasoline prices influenced by economic, seasonal, and geopolitical factors, highlighting the need for sophisticated modeling to accurately forecast future prices. 
+
+We can see the upward trend in the log transformed data. Let's see how it shows up on the ACF.
+
+```{r}
+Acf(ln.data)
+percent_change=diff(ln.data, lag=1)
+
+par(mfrow=c(1,2))
+Acf(percent_change, lag.max = 54)
+Pacf(percent_change, lag.max = 54)
+par(mfrow=c(1,1))
+```
+Since ACF tails off and PACF cuts off, we will fit an AR model.
+To figure out the order of AR model, we check PACF.
+
+### Modeling the gas price growth rate
+
+(@) Use the training set and plot the ACF and PACF functions of the growth rate of the gas price found in previous part. Based on the patterns present suggest two models to fit to the data. Clearly justify your suggested model. Include your script.
+```{r}
+Pacf(percent_change, lag.max = 10)
+```
+Since PACF cuts off after lag 1, we will fit AR(1) model to the percent change of the gas prices data.
+```{r}
+# split percentage_change into training and testing
+
+n=length(percent_change)
+nValid= 16
+
+train.ts= window(percent_change, 
+                 end=c(1997, 1+n-nValid))
+length(train.ts)
+valid.ts=window(percent_change, 
+                start=c(1997, 1+n-nValid+1))
+length(valid.ts)
+```
+
+(@) Fit this model to the training set. Report the RMSE for the training set.
+```{r}
+ar1 = Arima(train.ts, order=c(1,0,0))
+summary(ar1)
+
+ar1.pred = forecast(ar1, h=length(train.ts))
+accuracy (ar1.pred, valid.ts)
+```
+RSME: 0.01847888
+
+(@) Predict the gas price growth rate for the next 4 month, i.e. h = 16 weeks. Access the accuracy and robustness of your model.
+```{r}
+ar1.pred = forecast(ar1, h=16)
+checkresiduals(ar1)
+
+qqnorm(ar1$residuals)
+qqline(ar1$residuals)
+```
+
+The QQplot of the AR1 model's residuals against a standard normal distribution indicates a relatively good fit of the model to the data, as most points closely align with the theoretical line. This suggests that the residuals of the AR1 model are approximately normally distributed
+
+# Summary
+
+(@) Write a short, one paragraph, executive summary of your analysis in a paragraph form so that a data savy economist could understand.
+
+The analysis of weekly retail regular gasoline prices in the United States, spanning from January 1997 to September 2010, focuses on understanding the price dynamics through log-transformed data. This period showcases an overall increasing trend in gasoline prices, interspersed with notable fluctuations and evident seasonal variations. These patterns highlight the multifaceted nature of gasoline pricing, influenced by economic cycles, seasonal demand shifts, and geopolitical developments.
+
+An in-depth examination utilizing the Autocorrelation Function (ACF) and Partial Autocorrelation Function (PACF) suggested the fitting of an Autoregressive (AR) model, specifically an AR(1) model, to capture the essence of gasoline price changes over time. The application of this model to a training dataset yielded a Root Mean Squared Error (RMSE) of 0.01847888, indicating a reasonable fit and the model's adequacy in encapsulating the historical price movements.
+
+Forecasts extending over the next 16 weeks predict a modest upward adjustment in the gasoline price growth rate, pointing towards a period of relative stability with minor fluctuations anticipated. These predictions offer insightful implications for economic forecasting and strategic planning, underlining the significant role of time series analysis in navigating the complexities of energy markets. The model's performance, as quantified by the RMSE, reinforces the predictive capability and utility of the AR(1) model in forecasting gasoline price trends, providing a robust framework for economic analysis and decision-making in the context of fluctuating energy prices.

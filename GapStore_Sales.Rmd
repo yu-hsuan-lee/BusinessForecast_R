@@ -1,0 +1,134 @@
+---
+title: 'DSO 424: Business Forecasting'
+author: "Lab 9: Capturing long-term tendency"
+header-includes: \usepackage{color}
+output:
+  word_document: default
+  pdf_document: default
+---
+
+\begin{center} 
+{\color{red} \textbf{The GAP Case}}
+\end{center}
+
+# Background
+
+Few retailers have accomplished what The Gap has. The Gap has managed to successfully market its retail stores and the apparel it carries. In 1992, The Gap was the number two clothing brand in America, and in 1994 it placed in the top 25 of the 50 most recognizable brands in the United States. There are only two private-brand retailers that achieved this coveted brand image for their stores' products: Victoria's Secret and The Gap. While many other retailer, such as The Limited, lost strong brand images, The Gap continued to redifine its strategy and managed to maintain market dominance. By the end of 1995, The Gap operated over 1,500 stores in its four domestic divisions, which include The Gap, GapKids, Banana Republic, and the Old Navy Clothing Co. The Gap's fifth division, its International Division, operated 164 stores by the end of 1995 in countries such as Canada, the UK, France, Germany, and Japan.
+
+With its current mix of stores, The Gap has successfully carved out a position for itself in every retail clothing category. 
+
+# Task
+
+It is the end of 2006. You are hired as a consultant to analyse the sales data and provide an future outlook analysis for The Gap.
+
+# Data
+
+Consider the sales of The Gap stores for the 76 quarters covering 1985Q1 through 2006Q4. The data are given in _GAPdata.csv_ file and containg the midmonth of The Gap quarters and the total sales in thousands of USD.
+
+
+(@) Produce the time plot of the Gap sales. Label the axis nicely. Include your script. 
+Based on the plot, describe the trend in the sales if present. What do you think explains the seasonal pattern in its sales data?
+```{r}
+data = read.csv("GAPdata.csv", header=T)
+
+# Create the time series object
+data.ts = ts(data$GapSales, start = c(1985, 1), end = c(2006, 4), freq = 4)
+
+#Create a plot using autoplot()
+library(forecast)
+
+autoplot(data.ts/1000, ylab = "Sales in mln$", xlab="Year", main ="Gap Sales")
+
+```
+
+(@) Split the data into training and validation sets. Let 2006 sales be the validation set. Include your script.
+```{r}
+train.ts=window(data.ts, start=c(1985,1), end=c(2005,4), frequncy=4)
+
+valid.ts=window(data.ts,start=c(2006,1), end=c(2006,4), frequency=4)
+```
+
+### Searching for the best trend and seasonality patterns
+
+You are determined to capture the fluctuations in The Gap quarterly sales. For this you are going to look for the best way to summarize trend and seasonality you've noticed earlier. You decide to work with the training set and use validation set only to access model accuracy.
+
+(@) First, fit the linear trend to the training set. Does it look like the right pattern? You can assess it visually. Include the plot of the training set with the linear trend and your comments. Include the script.
+```{r}
+model1=tslm(train.ts~trend)
+
+autoplot(train.ts, ylab = "Sales in 1000$", main="Gap Sales")+
+  autolayer(model1$fitted.values)
+```
+
+The linear fit is not appropriate the sales increase rate is not linear
+
+(@) Next, fit the cubic trend. Does it look like the right pattern? Does it capture the long-term tendency in The Gap sales better than the linear trend? You can assess it visually. Include the plot of the training set with the linesr trend and your comments. Include the script.
+```{r}
+model2=tslm(train.ts~trend +I(trend^2) + I(trend^3))
+
+autoplot(train.ts, ylab = "Sales in 1000$", main="Gap Sales")+
+  autolayer(model2$fitted.values)
+```
+The cubic trend captures the long-term tendency much better, it reflects the slowdown in the growth during the recent years
+
+(@) Fit the additive model with cubic trend and additive seasonality. Use this model to get training and validation errors. Plot the observed and fitted values during the training set, add the predicted values and 95% confidence interval and the actual sales records during the validation period. Comment on the accuracy of fit and validation.
+```{r}
+model3=tslm(train.ts~trend+I(trend^2) + I(trend^3)+ season)
+
+predicted_values3=forecast(model3, h=4, level = 95)
+
+autoplot(predicted_values3, xlab="Time", ylab="1000 USD", main="TGap Sales with Additive Model")+
+  autolayer(valid.ts)+
+  autolayer(model3$fitted.values)
+
+accuracy(predicted_values3, valid.ts)
+```
+The model doesn't capture the increased uncertainty in the most recent data --> not very accurate and has questionable robustness as shown by the RMSE increase
+(@) Fit the multiplicative model with cubic trend and multiplicative seasonality. Use this model to get training and validation errors. Plot the observed and fitted values during the training set, add the predicted values and 95% confidence interval and the actual sales records during the validation period. Comment on the accuracy of fit and validation.
+```{r}
+model4 = tslm(train.ts ~ trend + I(trend^2) + I(trend^3) + season, lambda=0)
+
+predicted_values4 = forecast(model4, h=4, level=95)
+autoplot(predicted_values4, ylab = "Sales in 1000$", main="Gap Sales with Multiplicative Model") +
+  autolayer(model4$fitted.values) +
+  autolayer(valid.ts)
+
+accuracy(predicted_values4, valid.ts)
+```
+Based on the graph and the RSME and MAPE, the model seems to be performing reasonably well, with errors that might be acceptable.
+
+### Choosing the best model
+
+(@) Select the best model out of the above you've tried. Clearly state why you've selected it.
+Explain in paragraph form what are the features/qualities of the sales records of The Gap this model captures.
+
+The multiplicative model with cubic trend and multiplicative seasonality is the best model for forecasting The Gap's sales. This conclusion is based on the corrected Root Mean Squared Error (RMSE) values for both training and validation phases:
+
+Additive Model
+Training Error (RMSE): 298,051.7 (in thousands of USD)
+Validation Error (RMSE): 671,259.2 (in thousands of USD)
+
+Multiplicative Model
+Training Error (RMSE): 221,475.0 (in thousands of USD)
+Validation Error (RMSE): 405,642.8 (in thousands of USD)
+
+The multiplicative model's lower RMSE values indicate a more accurate fit to the historical sales data and better predictive performance. This model effectively captures the features and qualities of The Gap's sales records, particularly the proportional relationship between the seasonal fluctuations and the overall level of sales. By accounting for how seasonal effects multiply as the overall sales volume increases, the multiplicative model offers a nuanced understanding of The Gap's sales dynamics over time.
+
+(@) Based on the best model from the previous part, prepare the forecast of The Gap sales for the first quarter of 2007. The actual Gap sales for the first quarter of 2007 were $3,558,000,000. Assess the accuracy of the forecast. Include your script.
+```{r}
+# Use all data
+model = tslm(data.ts ~ trend + I(trend^2) + I(trend^3) + season, lambda=0)
+
+# Predict 1 month ahead ( Jan 1995)
+predicted_values = forecast(model, h=1, level=95)
+predicted_values
+```
+The forecast was slightly lower than the actual sales, with a difference of approximately $67.337 million. This difference represents the forecast error. While the forecast did not perfectly match the actual sales, the relatively small error margin indicates that the model provided a reasonably accurate forecast, capturing the general trend and magnitude of The Gap's sales for the quarter.
+
+# Summary
+
+(@) Write a short, one paragraph, executive summary in a paragraph form so that a data-savy manager of The Gap could understand it.
+
+The analysis of The Gap's sales from 1985 Q1 through 2006 Q4, utilizing advanced forecasting techniques, has led to the development of a robust model that effectively captures the nuances of the company's sales trends and seasonal patterns. By employing a multiplicative model with a cubic trend and multiplicative seasonality, we've achieved a more accurate representation of historical sales data, which significantly enhances the reliability of our sales forecasts. This model outperformed others in terms of precision, particularly in predicting the fluctuations that correspond with the company's sales volume over time. Specifically, it demonstrated superior precision with a training Root Mean Squared Error (RMSE) of 221,475 (in thousands of USD) and a validation RMSE of 405,642.8 (in thousands of USD), alongside a Mean Absolute Percentage Error (MAPE) of 8.733% for the test set. These metrics underscore the model's effectiveness in capturing the proportional relationship between seasonal shifts and overall sales volume, providing a nuanced and reliable forecast.
+
+Our forecasts, including the first quarter of 2007, have shown a close approximation to actual sales figures, indicating the model's efficacy in anticipating future trends. This insight is instrumental for strategic planning and reinforces the model's value in guiding The Gap's inventory, marketing, and expansion decisions.

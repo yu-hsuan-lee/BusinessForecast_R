@@ -1,0 +1,284 @@
+---
+title: 'DSO 424: Business Forecasting'
+author: 'Smoothing Methods: Moving Average'
+date: "Fall 2022"
+output:
+  word_document: default
+  pdf_document: default
+header-includes: \usepackage{color}
+editor_options:
+  chunk_output_type: console
+---
+
+\begin{center} 
+{\color{red} \textbf{Week 5}}
+\end{center}
+
+
+# Smoothing Methods
+
+Smoothing methods are data-driven techniques since they don't assume a predetermined structure in the data (e.g. linearity). They are based on averaging values over multiple periods in order to reduce noise.
+
+## Moving Average
+
+A moving average consists of averaging neighboring values across a window $W$ of consecutive periods and thus generating a series of averages. There are two types of moving averages: (1) a centered moving average, and (2) a trailing moving average. The first is mainly used for visualizing and highlighting the trend in the time series because it suppresses seasonality and noise, and the latter is used for forecasting. 
+
+In a **centered moving average**, the value of the moving average at any time $t$ is computed by centering the window $w$ around time $t$ and averaging across the $w$ values within the window. For example, with a window of width $w=5$, the moving average at time point $t=3$ means averaging the values of the series at time points $1, 2, 3, 4, 5$.
+
+The centered moving average could not be used for forecasting simply because it uses data in the past and the _future_ of a given point. At the time of forecasting the future is unknown. Thus, we use it as an aggregate to suppress the seasonality and noise, so that we can highlight the trend in the series. 
+
+The **trailing moving average** puts the window $w$ over the most recent available $w$ values of the series before a given time point $t$. For example, with a window of width $w=5$, the moving average at time point $t=10$ means averaging the values of the series at time points $6, 7, 8, 9, 10$.
+
+When it comes to choosing the window width $w$, we should think of the following two extreme scenarios: 
+
+1. **Longest Possible Window**: In this case, $w$ is equal to the length of the training data, and thus, the moving average (MA) will be equal to the average of the whole series. In this senario, we will have **oversmoothing**.
+
+2. **Shortest Possible Window**: In this case, $w=1$, so this means that our forecast will be equal to the value of the previous time period (i.e. naive forecast). In this scenario, we will have **undersmoothing**. 
+
+## Moving Average: Amtrak Rideship case
+
+In this example, we will look at the Amtrak ridership series. In the following code, we will see how we create and plot the **centered moving average**. 
+
+### Part 1. Data visualization.
+
+```{r}
+getwd()
+setwd("/Users/emilylee/Desktop")
+
+# upload the dataset
+data=read.csv("AmtrakPassengers(2).csv", header=T)
+head(data,2)
+# create the ts object (monthly data, starts Jan 1991)
+
+data.ts= ts(data$Ridership, start = c(1991,1), frequency = 12)
+```
+
+Let's plot the time series
+
+```{r}
+# feel free to use either plot() or autoplot(). Create a well formatted chart
+library(forecast)
+library(ggplot2)
+# to adjust the axis tick marks
+#scale_y_continuous(breaks=seq(0,40,5))
+
+autoplot(data.ts, xlab="Years", ylab="Ridership") +
+  scale_x_continuous(breaks=seq(1991,2004,2))
+```
+There is level, noise, and seasonal components present in the data. There is another large scale component that can be trend or a large scale periodic component.
+
+Let's aggregate the data to yearly totals.
+
+```{r}
+autoplot(aggregate(data.ts))
+```
+
+### Part 2. Moving average smoothing: centered and trailing
+
+Use the _ma()_ function from _forecast_ library to get the centered moving average.
+We will use $w = 12$ months to suppress the yearly pattern
+
+
+```{r}
+## Centered Moving Average
+## order: the window width for the moving average. w = 12 here.
+library(forecast)
+#?ma
+w=12
+ma.centered = ma(data.ts, order= w)
+
+length(data.ts)
+length(ma.centered)
+```
+
+Let's create a time series plot with nice labels for the axis.
+
+```{r}
+autoplot(ma.centered) +
+  scale_x_continuous(breaks=seq(1991,2004,2))
+
+#let's change w = 3, to see what it does
+w=3
+ma.centered2 = ma(data.ts, order= w)
+autoplot(ma.centered2) +
+  autolayer(data.ts) +
+  scale_x_continuous(breaks=seq(1991,2004,2))
+# larger window set = smoother results
+```
+
+Note, how we lack some data points around the edges.
+
+ In the following code, we will see how we create and plot the **trailing moving average**. 
+
+```{r}
+library(forecast)
+library(zoo) #we need it for the rollmean()
+
+## Trailing Moving Average
+## k: the window width for the moving average. w = 12 here.
+
+w=12
+ma.trailing=rollmean(data.ts, k=w, align="right")
+```
+
+Let's put them all on one plot to see the difference between the centered moving average and the trailing moving average: 
+
+```{r}
+# use autoplot()
+# check the textbook on how to get this chart using plot() function
+autoplot(data.ts) + 
+  autolayer(ma.centered) +
+  autolayer(ma.trailing)
+  
+```
+
+
+### Part 3. Forecasting: simple and rolling
+
+Next, we will build a 12-month moving average forecaster for the Amtrak ridership. We will partition the series, leaving 36 months as the validation period. Since we will be doing forecasting, then we will use the _trailing moving average_: 
+
+```{r}
+# let's use the code from the pre-class assignment to
+# split the data into training and validation
+n=length(data.ts)
+stepsAhead=36
+
+nTrain = n-stepsAhead
+
+# create the training set
+startYear=start(data.ts)[1]
+startQ=start(data.ts)[2]
+
+train.ts=window(data.ts, end=c(startYear, nTrain+startQ-1)) #startQ-1 = shifted by one quarter
+
+#create the validation set
+valid.ts=window(data.ts, start=c(startYear, nTrain+startQ-1+1))
+
+tail(train.ts,2)
+head(valid.ts,2)
+
+# Fit a trailing average smoother
+w=12
+ma.trailing = rollmean(train.ts, k=w, align = "right")
+
+# Find the last moving average in the training period
+last.ma=tail(ma.trailing,1)
+
+# Use the last moving average as the prediction for each month in the validation period
+long.term.pred=ts(rep(last.ma, stepsAhead),
+                  start = start(valid.ts),
+                  frequency = frequency(valid.ts))
+
+# let's find the actual observed average over the validation period
+
+valid.mean=ts(rep(mean(valid.ts), stepsAhead),
+                  start = start(valid.ts),
+                  frequency = frequency(valid.ts))
+
+
+```
+
+
+Let's plot the results on the same set of axis.
+
+```{r}
+# use autoplot() and autolayer() functions
+autoplot(data.ts)+
+  autolayer(valid.ts)+
+  autolayer(long.term.pred)+
+  autolayer(valid.mean)
+  
+
+```
+
+Check whether the forecasts for all months in the validation period are identical (1938.33). 
+
+```{r}
+# find the predicted value
+predicted_value = long.term.pred[1] # Since all values are identical, we can just take the first one
+predicted_value
+```
+
+In this example, it is clear that the moving average forecaster is inadequate for generating monthly forecasts because it does not capture seasonality in the data. Seasons with high ridership are **underforecasted**, and seasons with low ridership are **overforecasted**.
+
+Let's improve our forecast. It is obvious that producing long-term forecast based on one value won't capture the seasonal variability.
+
+Let's produce a one-step-ahead _rolling forecast_ using trailing moving average.
+
+Before we do that, let's learn how to write loop in R.
+
+```{r}
+# generate 100 standard normal random variables.
+k=1000
+sample.means=rep(NA, k)
+
+for(i in 1:k){
+  x=rnorm(100)
+  x.bar=mean(x)
+  sample.means[i]=x.bar
+}
+
+sample.means
+mean(sample.means)
+hist(sample.means)
+```
+
+```{r}
+#the recording cut off at this point
+# create a loop that does one-step-ahead forecast using the trailing
+# moving average
+nValid=36
+
+# create a one-step-ahead rolling forecast
+ma.rolling.pred=rep(NA, nValid)
+                    
+# create an empty vector to store our prediction results
+
+
+# start the for loop
+for(i in 1:nValid){
+  # Split the data into training and validation
+  train.ts=window(data.ts, end= c(startYear, nTrain+startQ-1
+                                  +(i-1)))
+  # Fit a trailing average smoother
+  tmp=rollmean(train.ts, k=12, align = "right")
+  # Find the last moving average in the training period
+  ma.rolling.pred[i]=tail(tmp,1)
+  # Use the last moving average as the prediction for each month in the validation   period
+}
+  
+# convert the predicted forecasts into a time series
+# object with proper start and end dates
+
+ma.rolling.pred.ts=ts(ma.rolling.pred,
+                      start=start(valid.ts),
+                      frequency = frequency(valid.ts))
+
+
+```
+
+Plot the results that include both training, validation sets, fitted and predicted values.
+
+```{r}
+# use autoplot() function
+autoplot(data.ts)+
+  autolayer(valid.ts)+
+  autolayer(ma.rolling.pred.ts)+
+  autolayer(ma.trailing)+
+  autolayer(long.term.pred)+
+  autolayer(valid.mean)
+  
+
+```
+
+Comparing the accuracy of two forecasting approaches it is not surprising that we get more accurate results using the rolling forecast approach. It is a one-step-ahead forecast which is ``easier'' to do than long term predictions.
+
+```{r}
+# use function accuracy() to compare two approaches
+accuracy(long.term.pred, valid.ts)
+accuracy(long.term.pred, valid.mean)
+  
+accuracy(ma.trailing, train.ts) # train error
+accuracy(ma.rolling.pred.ts, valid.ts) # test error
+```
+

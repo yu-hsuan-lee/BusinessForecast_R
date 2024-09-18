@@ -1,0 +1,113 @@
+---
+title: 'DSO 424: Business Forecasting'
+author: 'Lab 4: Forecasting Amazon Revenue'
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+header-includes: \usepackage{color}
+---
+
+# Case: Amazon.com Revenues 
+
+Amazon.com is primarily a retail site with a sales revenue model. Amazon makes its money by taking a small percentage of the sale price of each item that is sold through its website. Amazon also allows companies to advertise their products by paying to be listed as featured products. 
+
+In this case, we will analyze Amazon's revenue from 2004-2015. The data file is on blackboard (`amazonRevenue.csv`), and it shows the date and the revenue in billions of USD.
+
+(@) Read the data set into a data frame called `amazon`.
+
+```{r}
+data = read.csv("amazonRevenue.csv", head=T)
+```
+
+(@) What is the frequency of the data collected?
+```{r}
+head(data, 7)
+```
+the data are quarterly
+
+(@) Create a time series object for the revenue data. Include your script.
+```{r}
+data.ts= ts(data$Revenue, start=c(2004,2), frequency = 4)
+```
+
+(@) Create a time plot for Amazon's revenue between 2004-2015. Make sure to nicely label the axis and the title. 
+```{r}
+library(forecast)
+autoplot(data.ts, ylab="Revenue", xlab="Time")
+```
+
+(@) Does the time series has a seasonality component? If so, is it additive or multiplicative seasonality? (base your answer on visual analysis of the time plot only).
+# The plot suggest a multiplicative seasonality, where the seasonal effect grows in proportion to the increase in the trend of the data.
+
+(@) Create a plot of the aggregated series (sum). What does this plot tell us?
+```{r}
+annual_revenue = aggregate(data.ts, nfrequency = 1, FUN = sum)
+autoplot(annual_revenue, main="Annual Revenue of Amazon", ylab = "Annual Revenue", xlab = "Year")
+```
+The line on the graph has an overall upward trend, indicating that Amazon's annual revenue has been increasing year over year during this period. The growth looks to be somewhat exponential as the slope of the line increases, suggesting that the rate of revenue growth has been accelerating.
+
+
+(@) Create a side-by-side box plot that shows the variation in the revenues among the different quarters for all years combined. What does this plot tell you?
+```{r}
+data$Quarter = factor(cycle(data.ts))
+boxplot(Revenue ~ Quarter, data = data, main = "Quarterly Revenue Boxplot",
+        ylab = "Revenue (in billions)", xlab = "Quarter")
+```
+This plot tells us that there is seasonal variation in the company's revenue, with the fourth quarter typically having higher revenue than other quarters, which could be due to increased sales during the holiday season. The first quarter tends to have the lowest revenue, which may reflect a post-holiday dip in consumer spending.
+
+(@) Split the series into training and validation with year 2015 being the validation period. Include your script for this step.
+```{r}
+n=length(data.ts)
+
+stepAhead=4
+nTrain = n-stepAhead
+
+# create the training set
+startYear=start(data.ts)[1]
+startQ=start(data.ts)[2]
+
+train.ts=window(data.ts, end=c(startYear, nTrain+startQ-1)) #startQ-1 = shifted by one quarter
+
+#create the validation set
+valid.ts=window(data.ts, start=c(startYear, nTrain+startQ-1+1))
+```
+
+(@) If we want to use a naive model to do our forecasting, what would be the forecast of Amazon's revenue for the first quarter of 2016? Report your forecast only.
+```{r}
+amazon.ts=data.ts
+tail(amazon.ts,1)
+# or
+naive(valid.ts, h=1)
+
+# if we want to predict Q4 of 2016. It will be the same (35.75), since we do not have any new observed records
+```
+
+(@) Using the training data, fit a seasonal naive forecasting model that predicts revenue for one season ahead. Find forecasted amazon revenue for 2015. Include your script for this step and report the forecasted values.
+```{r}
+snaive.pred=snaive(train.ts, h=4)
+```
+
+(@) Plot the training set and the forecasted values for the amazon revenue. Use _lines()_ command to add the actual observed revenue during 2015. Label the axis properly.
+```{r}
+autoplot(train.ts, ylab="Revenue", xlab = "Time")+
+  autolayer(snaive.pred$mean, series="SNAIVE Prediction", PI=FALSE) + # Predicted values
+  autolayer(valid.ts, series="Validation Data") # Actual values
+
+# or
+
+plot(train.ts, main="Training Set and Forecasted Amazon Revenue", ylab="Revenue", xlab="Time")
+lines(snaive.pred$mean, col='blue') # Forecasted values
+lines(window(amazon.ts, start=c(2015,1), end=c(2015,4)), col='red') # Actual observed revenue for 2015
+legend("topright", legend=c("Forecasted", "Actual"), col=c('blue', 'red'), lty=1)
+
+```
+
+(@) Find the training and validation MAE, MAPE, and RMSE for the naive model you created in the previous question? How would you interpret MAPE? (Hint: use _accuracy()_ command of *forecast* package)
+```{r}
+accuracy(snaive.pred, valid.ts)
+```
+
+(@) Based on your results above, is your model stable? Is it accurate? Would you feel comfortable using it to make investments?
+# Fairly stable; it performs well on unseen data, as evidenced by the reduced percentage errors (MPE and MAPE) in the validation set. The ACF1 values indicate some level of autocorrelation in the residuals; however, the significant decrease in error metrics in the validation set outweighs initial concerns about overfitting or instability across the dataset periods.Given the model's demonstrated stability and accuracy on the validation set, it suggests a level of reliability that could be cautiously considered in the context of making investment decisions.
+
