@@ -1,43 +1,6 @@
----
-title: 'DSO 424: Business Forecasting'
-author: 'Smoothing Methods: Moving Average'
-date: "Fall 2022"
-output:
-  word_document: default
-  pdf_document: default
-header-includes: \usepackage{color}
-editor_options:
-  chunk_output_type: console
----
+## Amtrak Rideship case
 
-\begin{center} 
-{\color{red} \textbf{Week 5}}
-\end{center}
-
-
-# Smoothing Methods
-
-Smoothing methods are data-driven techniques since they don't assume a predetermined structure in the data (e.g. linearity). They are based on averaging values over multiple periods in order to reduce noise.
-
-## Moving Average
-
-A moving average consists of averaging neighboring values across a window $W$ of consecutive periods and thus generating a series of averages. There are two types of moving averages: (1) a centered moving average, and (2) a trailing moving average. The first is mainly used for visualizing and highlighting the trend in the time series because it suppresses seasonality and noise, and the latter is used for forecasting. 
-
-In a **centered moving average**, the value of the moving average at any time $t$ is computed by centering the window $w$ around time $t$ and averaging across the $w$ values within the window. For example, with a window of width $w=5$, the moving average at time point $t=3$ means averaging the values of the series at time points $1, 2, 3, 4, 5$.
-
-The centered moving average could not be used for forecasting simply because it uses data in the past and the _future_ of a given point. At the time of forecasting the future is unknown. Thus, we use it as an aggregate to suppress the seasonality and noise, so that we can highlight the trend in the series. 
-
-The **trailing moving average** puts the window $w$ over the most recent available $w$ values of the series before a given time point $t$. For example, with a window of width $w=5$, the moving average at time point $t=10$ means averaging the values of the series at time points $6, 7, 8, 9, 10$.
-
-When it comes to choosing the window width $w$, we should think of the following two extreme scenarios: 
-
-1. **Longest Possible Window**: In this case, $w$ is equal to the length of the training data, and thus, the moving average (MA) will be equal to the average of the whole series. In this senario, we will have **oversmoothing**.
-
-2. **Shortest Possible Window**: In this case, $w=1$, so this means that our forecast will be equal to the value of the previous time period (i.e. naive forecast). In this scenario, we will have **undersmoothing**. 
-
-## Moving Average: Amtrak Rideship case
-
-In this example, we will look at the Amtrak ridership series. In the following code, we will see how we create and plot the **centered moving average**. 
+We will look at the Amtrak ridership series. In the following code, we will see how we create and plot the **centered moving average**. 
 
 ### Part 1. Data visualization.
 
